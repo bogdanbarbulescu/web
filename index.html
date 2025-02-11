@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Editor</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/monokai.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Web Editor</h1>
+    <div>
+      <label for="theme-selector">Theme: </label>
+      <select id="theme-selector">
+        <option value="default">Default</option>
+        <option value="monokai">Monokai</option>
+      </select>
+    </div>
+  </header>
+
+  <div id="main-container">
+    <div id="editor-container">
+      <div class="editor-panel">
+        <div class="editor-label">
+          <span>HTML</span>
+          <button class="maximize-button" data-target="html-editor">Maximize</button>
+        </div>
+        <textarea id="html-editor"></textarea>
+        <div class="resizer" data-target="html-editor"></div>
+      </div>
+      <div class="editor-panel">
+        <div class="editor-label">
+          <span>CSS</span>
+          <button class="maximize-button" data-target="css-editor">Maximize</button>
+        </div>
+        <textarea id="css-editor"></textarea>
+        <div class="resizer" data-target="css-editor"></div>
+      </div>
+      <div class="editor-panel">
+        <div class="editor-label">
+          <span>JavaScript</span>
+          <button class="maximize-button" data-target="js-editor">Maximize</button>
+        </div>
+        <textarea id="js-editor"></textarea>
+        <div class="resizer" data-target="js-editor"></div>
+      </div>
+    </div>
+
+    <div id="output-container">
+      <div id="preview-container">
+        <div class="editor-label">
+          <span>Preview</span>
+           <button class="maximize-button" data-target="preview-container">Maximize</button>
+        </div>
+        <iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe>
+      </div>
+
+      <div id="console-container">
+        <div class="editor-label console-header">
+          <span>Console</span>
+          <button id="console-toggle" data-state="minimized">Maximize</button>
+        </div>
+        <div id="console"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="export-buttons">
+    <button id="export-html">Export HTML</button>
+    <button id="export-css">Export CSS</button>
+    <button id="export-js">Export JavaScript</button>
+    <button id="export-all">Export All (Complete HTML)</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/htmlmixed/htmlmixed.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
