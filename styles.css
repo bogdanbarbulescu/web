@@ -6,6 +6,7 @@ body {
 /* Main container adjustments */
 #main-container {
     gap: 0.5rem; /* Spacing between editor/output columns */
+    transition: all 0.3s ease-in-out; /* Smooth transition for layout changes */
 }
 
 /* Make editor/output containers fill height */
@@ -16,25 +17,33 @@ body {
     flex-shrink: 1;
     min-height: 0; /* Important for flex children in column layout */
     min-width: 0; /* Important for flex children in row layout */
+    display: flex; /* Ensure they are flex containers */
+    flex-direction: column; /* Stack panels vertically */
+    transition: all 0.3s ease-in-out; /* Smooth transition for layout changes */
 }
 
 /* Editor panel styling */
 .editor-panel {
     flex: 1 1 33%; /* Allow panels to share space, basis 33% */
     min-height: 50px; /* Minimum height when not minimized */
-    transition: flex 0.3s ease-in-out, min-height 0.3s ease-in-out; /* Smooth transitions */
+    transition: flex 0.3s ease-in-out, min-height 0.3s ease-in-out, opacity 0.3s ease-in-out; /* Smooth transitions */
     overflow: hidden; /* Prevent content overflow when animating */
+    display: flex; /* Make panel a flex container */
+    flex-direction: column; /* Stack label and content */
 }
 
 .editor-label {
     flex-shrink: 0; /* Prevent header from shrinking */
     font-size: 0.85rem;
     cursor: default; /* Indicate header is not draggable */
+    /* Ensure header background uses Bootstrap variable */
+    background-color: var(--bs-card-header-bg);
 }
 
 .editor-content {
     height: 100%; /* Ensure content div fills space */
     overflow: hidden; /* Hide scrollbars on the div, CodeMirror handles its own */
+    flex-grow: 1; /* Allow content area to grow */
 }
 
 /* CodeMirror adjustments */
@@ -51,9 +60,16 @@ body {
     background-color: var(--bs-body-bg);
     color: var(--bs-body-color);
 }
+[data-bs-theme="light"] .cm-s-neat .CodeMirror-gutters {
+    background-color: #f7f7f7; /* Light grey gutter */
+    border-right: 1px solid #dee2e6;
+    color: #6c757d;
+}
+
 /* Ensure Monokai background is used in dark mode */
 [data-bs-theme="dark"] .cm-s-monokai.CodeMirror {
      background-color: #272822; /* Explicit Monokai background */
+     color: #f8f8f2; /* Monokai default text color */
 }
 
 /* Dark theme specific CodeMirror adjustments */
@@ -61,18 +77,18 @@ body {
     border-color: var(--bs-border-color-translucent);
 }
 [data-bs-theme="dark"] .cm-s-neat .CodeMirror-gutters { /* Example: Light theme gutter in dark */
-    background-color: #f8f9fa; /* Or choose a suitable dark gutter color */
-    border-right: 1px solid #dee2e6;
+    background-color: var(--bs-tertiary-bg); /* Adjust to a dark gutter */
+    border-right: 1px solid var(--bs-border-color);
+    color: var(--bs-secondary-color);
 }
 [data-bs-theme="dark"] .cm-s-monokai .CodeMirror-gutters {
     background: #272822; /* Monokai gutter */
     border-right: 1px solid #3a3a3a; /* Darker border */
+    color: #909090; /* Gutter text color */
 }
 
 
-/* --- Minimize/Maximize States --- */
-
-/* State when a panel is minimized */
+/* --- Editor Panel Minimize State --- */
 .editor-panel.minimized {
     flex-grow: 0;
     flex-basis: auto; /* Let it shrink to content (header only) */
@@ -84,71 +100,163 @@ body {
     display: none;
 }
 
+/* Icon change for minimized editor panel */
 .editor-panel.minimized .btn-minimize i {
-    /* Change icon to restore */
+    /* Change icon to restore - using angle-expand */
     content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-arrows-angle-expand' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707'/></svg>");
 }
+/* Ensure maximize icon is correct when minimized */
 .editor-panel.minimized .btn-maximize i {
-    /* Ensure maximize icon remains */
     content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-arrows-fullscreen' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707m0-4.344a.5.5 0 0 0-.707 0l-4.096-4.096V4.5a.5.5 0 1 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344 0a.5.5 0 0 1 .707 0l4.096-4.096V4.5a.5.5 0 1 1 1 0V.525a.5.5 0 0 1-.5-.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707'/></svg>");
 }
 
-/* State when a panel is maximized */
+
+/* --- Editor Panel Maximize State --- */
+
+/* State when an editor panel is maximized */
+#editor-container.has-maximized {
+    /* The container itself doesn't change much, but its children do */
+}
+
 #editor-container.has-maximized > .editor-panel:not(.maximized) {
-    display: none; /* Hide non-maximized panels */
+    display: none; /* Hide non-maximized panels within the editor column */
 }
 
 .editor-panel.maximized {
+    /* Take full height of the editor container */
     flex-grow: 1;
-    flex-basis: 100%; /* Take full height */
+    flex-basis: 100%;
     height: 100%;
-    position: absolute; /* Take out of flow slightly for better control */
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 10; /* Bring to front within its container */
-    transition: none; /* Maximize instantly */
+    /* Use absolute positioning to overlay correctly if needed, depends on parent structure */
+    /* If parent #editor-container is position:relative, this works well */
+     position: absolute;
+     top: 0;
+     left: 0;
+     width: 100%;
+     z-index: 10; /* Ensure it's above siblings */
+    /* No transition when maximizing for instant feel */
+    transition: none;
+    margin-bottom: 0 !important; /* Remove margin when maximized */
 }
 
-/* Hide output when an editor is maximized */
+/* Hide output column when an editor is maximized */
 #editor-container.has-maximized + #output-container {
-    display: none !important;
+    display: none !important; /* Hide the entire output column */
 }
-/* Optional: Maximize output container - similar logic if needed */
 
-
+/* Icon change for maximized editor panel */
 .editor-panel.maximized .btn-maximize i {
-     /* Change icon to restore/minimize */
+     /* Change icon to restore/contract */
     content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-arrows-angle-contract' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M.172 15.828a.5.5 0 0 0 .707 0l4.096-4.096V14.5a.5.5 0 1 0 1 0v-3.975a.5.5 0 0 0-.5-.5H1.5a.5.5 0 0 0 0 1h2.768L.172 15.121a.5.5 0 0 0 0 .707M15.828.172a.5.5 0 0 0-.707 0l-4.096 4.096V1.5a.5.5 0 1 0-1 0v3.975a.5.5 0 0 0 .5.5H14.5a.5.5 0 0 0 0-1h-2.768L15.828.879a.5.5 0 0 0 0-.707'/></svg>");
 }
+/* Ensure minimize icon is correct when maximized */
 .editor-panel.maximized .btn-minimize i {
-     /* Ensure minimize icon remains */
     content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-dash-lg' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8'/></svg>");
 }
 
 
-/* Console Styling */
+/* --- Preview Maximize within App State --- */
+
+/* When preview is maximized, hide editor column */
+#main-container.preview-maximized #editor-container {
+  display: none;
+  opacity: 0; /* Fade out */
+  visibility: hidden;
+}
+
+/* Make output container take full width when editor is hidden */
+#main-container.preview-maximized #output-container {
+  width: 100%;
+  max-width: 100%;
+  flex-basis: 100%;
+  padding-left: 0 !important; /* Remove original padding */
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* Make preview container take full height within output container */
+#main-container.preview-maximized #preview-container {
+  height: 100%;
+  flex-grow: 1; /* Ensure it grows */
+  margin-bottom: 0 !important; /* Remove margin */
+  border-radius: var(--bs-card-border-radius); /* Ensure consistent radius */
+}
+
+/* Hide console container when preview is maximized */
+#main-container.preview-maximized #console-container {
+  display: none;
+  opacity: 0; /* Fade out */
+   visibility: hidden;
+}
+
+/* Icon change for preview maximize/restore button */
+#preview-fullscreen-btn.maximize-internal i.bi-arrows-angle-expand {
+    /* Default state icon - using angle-expand */
+     content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-arrows-angle-expand' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707'/></svg>") !important;
+}
+
+#preview-fullscreen-btn.restore-internal i {
+     /* Restore state icon - using angle-contract */
+    content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-arrows-angle-contract' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M.172 15.828a.5.5 0 0 0 .707 0l4.096-4.096V14.5a.5.5 0 1 0 1 0v-3.975a.5.5 0 0 0-.5-.5H1.5a.5.5 0 0 0 0 1h2.768L.172 15.121a.5.5 0 0 0 0 .707M15.828.172a.5.5 0 0 0-.707 0l-4.096 4.096V1.5a.5.5 0 1 0-1 0v3.975a.5.5 0 0 0 .5.5H14.5a.5.5 0 0 0 0-1h-2.768L15.828.879a.5.5 0 0 0 0-.707'/></svg>") !important;
+}
+
+/* Default icon setup for the preview button's i tag (if not using classes initially) */
+#preview-fullscreen-btn i.bi-arrows-angle-expand {
+     content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-arrows-angle-expand' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707'/></svg>") !important;
+}
+
+
+/* --- Console Styling --- */
 #console-container {
-    transition: max-height 0.3s ease-in-out;
+    transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    overflow: hidden; /* Hide content during transition */
+    flex-shrink: 0; /* Prevent console from shrinking excessively */
+}
+#console-container:not(.expanded) {
+     max-height: 60px; /* Height of header + padding */
 }
 #console-container.expanded {
-    max-height: 50%; /* Or desired expanded height */
+    max-height: 30%; /* Or desired expanded height/percentage */
 }
 
 #console {
-    font-family: monospace;
+    font-family: var(--bs-font-monospace);
     white-space: pre-wrap;
     word-break: break-all;
     background-color: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+    height: 100%; /* Fill the container */
+    /* Ensure display: block when expanded */
+    display: block;
 }
 
-/* Adjust console toggle icon */
-#console-toggle.expanded i {
+#console-container:not(.expanded) #console {
+     display: none; /* Hide content when not expanded */
+}
+
+/* Adjust console toggle icon based on state */
+#console-toggle[data-state="minimized"] i.bi-chevron-expand {
+     /* Default state */
+      content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-chevron-expand' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M3.646 9.146a.5.5 0 0 1 .708 0L8 12.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708zm0-2.292a.5.5 0 0 0 .708 0L8 3.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708z'/></svg>") !important;
+}
+#console-toggle[data-state="expanded"] i { /* Target i directly when expanded */
      /* Change icon to collapse */
-    content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-chevron-contract' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M1.646 13.854a.5.5 0 0 0 .708 0L8 8.207l5.646 5.647a.5.5 0 0 0 .708-.708l-6-6a.5.5 0 0 0-.708 0l-6 6a.5.5 0 0 0 0 .708m12.708-11.708a.5.5 0 0 1-.708 0L8 7.793 2.354 2.146a.5.5 0 1 1 .708-.708l5.292 5.292 5.292-5.292a.5.5 0 0 1 .708 0'/></svg>");
+    content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-chevron-contract' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M1.646 13.854a.5.5 0 0 0 .708 0L8 8.207l5.646 5.647a.5.5 0 0 0 .708-.708l-6-6a.5.5 0 0 0-.708 0l-6 6a.5.5 0 0 0 0 .708m12.708-11.708a.5.5 0 0 1-.708 0L8 7.793 2.354 2.146a.5.5 0 1 1 .708-.708l5.292 5.292 5.292-5.292a.5.5 0 0 1 .708 0'/></svg>") !important;
 }
 
-/* Footer */
+
+/* --- Footer --- */
 footer {
     flex-shrink: 0; /* Prevent footer from shrinking */
+    z-index: 5; /* Keep above main content but below maximized panels */
+    position: relative; /* Needed for z-index */
+}
+
+/* --- General Icon Resets --- */
+/* Ensure default icons are applied correctly if classes are removed */
+.editor-panel .btn-minimize i.bi-dash-lg {
+     content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-dash-lg' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8'/></svg>") !important;
+}
+.editor-panel .btn-maximize i.bi-arrows-fullscreen {
+    content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-arrows-fullscreen' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707m0-4.344a.5.5 0 0 0-.707 0l-4.096-4.096V4.5a.5.5 0 1 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344 0a.5.5 0 0 1 .707 0l4.096-4.096V4.5a.5.5 0 1 1 1 0V.525a.5.5 0 0 1-.5-.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707'/></svg>") !important;
 }
