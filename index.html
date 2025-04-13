@@ -1,84 +1,145 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light"> <!-- Start with light theme -->
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Web Editor</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- CodeMirror CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+  <!-- Default CodeMirror theme (light) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/neat.min.css">
+  <!-- Monokai CodeMirror theme (dark) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/monokai.min.css">
+
+  <!-- Custom Styles -->
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <header>
-    <h1>Web Editor</h1>
-    <div>
-      <label for="theme-selector">Theme: </label>
-      <select id="theme-selector">
-        <option value="default">Default</option>
-        <option value="monokai">Monokai</option>
-      </select>
-    </div>
+<body class="d-flex flex-column vh-100">
+
+  <header class="navbar navbar-expand-lg bd-navbar sticky-top bg-body-tertiary shadow-sm">
+    <nav class="container-fluid bd-gutter flex-wrap flex-lg-nowrap" aria-label="Main navigation">
+        <a class="navbar-brand p-0 me-0 me-lg-2" href="#">Web Editor</a>
+
+        <div class="d-flex ms-auto align-items-center">
+            <!-- Theme Toggle Button -->
+            <button class="btn btn-link nav-link py-1 px-0 px-lg-2" id="theme-toggle" type="button" aria-label="Toggle theme">
+                <i class="bi bi-sun-fill my-1"></i> <!-- Sun icon for light mode -->
+                <i class="bi bi-moon-stars-fill my-1 d-none"></i> <!-- Moon icon for dark mode (initially hidden) -->
+            </button>
+        </div>
+    </nav>
   </header>
 
-  <div id="main-container">
-    <div id="editor-container">
-      <div class="editor-panel">
-        <div class="editor-label">
-          <span>HTML</span>
-          <button class="maximize-button" data-target="html-editor">Maximize</button>
+  <!-- Main Content Area -->
+  <div id="main-container" class="container-fluid flex-grow-1 d-flex flex-column flex-lg-row overflow-hidden p-2">
+
+    <!-- Editor Column -->
+    <div id="editor-container" class="d-flex flex-column col-lg-6 pe-lg-2 pb-2 pb-lg-0 h-100 position-relative"> <!-- Added position-relative for maximize positioning -->
+      <!-- HTML Panel -->
+      <div class="editor-panel card mb-2 d-flex flex-column" data-editor-id="html">
+        <div class="editor-label card-header d-flex justify-content-between align-items-center p-2">
+          <span class="fw-bold"><i class="bi bi-code-slash"></i> HTML</span>
+          <div class="btn-group btn-group-sm">
+             <button class="btn btn-outline-secondary btn-clear" title="Clear Editor"><i class="bi bi-x-lg"></i></button>
+             <button class="btn btn-outline-secondary btn-minimize" title="Minimize"><i class="bi bi-dash-lg"></i></button>
+             <button class="btn btn-outline-secondary btn-maximize" title="Maximize"><i class="bi bi-arrows-fullscreen"></i></button>
+          </div>
         </div>
-        <textarea id="html-editor"></textarea>
-        <div class="resizer" data-target="html-editor"></div>
+        <div class="editor-content flex-grow-1 position-relative">
+           <textarea id="html-editor"></textarea>
+        </div>
       </div>
-      <div class="editor-panel">
-        <div class="editor-label">
-          <span>CSS</span>
-          <button class="maximize-button" data-target="css-editor">Maximize</button>
+
+      <!-- CSS Panel -->
+      <div class="editor-panel card mb-2 d-flex flex-column" data-editor-id="css">
+        <div class="editor-label card-header d-flex justify-content-between align-items-center p-2">
+          <span class="fw-bold"><i class="bi bi-filetype-css"></i> CSS</span>
+           <div class="btn-group btn-group-sm">
+             <button class="btn btn-outline-secondary btn-clear" title="Clear Editor"><i class="bi bi-x-lg"></i></button>
+             <button class="btn btn-outline-secondary btn-minimize" title="Minimize"><i class="bi bi-dash-lg"></i></button>
+             <button class="btn btn-outline-secondary btn-maximize" title="Maximize"><i class="bi bi-arrows-fullscreen"></i></button>
+          </div>
         </div>
-        <textarea id="css-editor"></textarea>
-        <div class="resizer" data-target="css-editor"></div>
+         <div class="editor-content flex-grow-1 position-relative">
+            <textarea id="css-editor"></textarea>
+         </div>
       </div>
-      <div class="editor-panel">
-        <div class="editor-label">
-          <span>JavaScript</span>
-          <button class="maximize-button" data-target="js-editor">Maximize</button>
+
+      <!-- JavaScript Panel -->
+      <div class="editor-panel card d-flex flex-column" data-editor-id="js">
+        <div class="editor-label card-header d-flex justify-content-between align-items-center p-2">
+          <span class="fw-bold"><i class="bi bi-filetype-js"></i> JavaScript</span>
+          <div class="btn-group btn-group-sm">
+             <button class="btn btn-outline-secondary btn-clear" title="Clear Editor"><i class="bi bi-x-lg"></i></button>
+             <button class="btn btn-outline-secondary btn-minimize" title="Minimize"><i class="bi bi-dash-lg"></i></button>
+             <button class="btn btn-outline-secondary btn-maximize" title="Maximize"><i class="bi bi-arrows-fullscreen"></i></button>
+          </div>
         </div>
-        <textarea id="js-editor"></textarea>
-        <div class="resizer" data-target="js-editor"></div>
+         <div class="editor-content flex-grow-1 position-relative">
+            <textarea id="js-editor"></textarea>
+         </div>
       </div>
     </div>
 
-    <div id="output-container">
-      <div id="preview-container">
-        <div class="editor-label">
-          <span>Preview</span>
-           <button class="maximize-button" data-target="preview-container">Maximize</button>
+    <!-- Output Column -->
+    <div id="output-container" class="d-flex flex-column col-lg-6 ps-lg-1 h-100">
+        <!-- Preview Panel -->
+        <div id="preview-container" class="card mb-2 d-flex flex-column flex-grow-1">
+            <div class="editor-label card-header d-flex justify-content-between align-items-center p-2">
+                <span class="fw-bold"><i class="bi bi-display"></i> Preview</span>
+                 <!-- Fullscreen Button for Preview -->
+                 <button id="preview-fullscreen-btn" class="btn btn-outline-secondary btn-sm" title="Maximize Fullscreen">
+                     <i class="bi bi-arrows-fullscreen"></i>
+                 </button>
+                 <!-- End Fullscreen Button -->
+            </div>
+            <div class="card-body p-0 h-100 overflow-hidden">
+                <iframe id="preview" sandbox="allow-scripts allow-same-origin" class="w-100 h-100 border-0"></iframe>
+            </div>
         </div>
-        <iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe>
-      </div>
 
-      <div id="console-container">
-        <div class="editor-label console-header">
-          <span>Console</span>
-          <button id="console-toggle" data-state="minimized">Maximize</button>
+        <!-- Console Panel -->
+        <div id="console-container" class="card d-flex flex-column" style="max-height: 200px;"> <!-- Initial max-height -->
+             <div class="editor-label console-header card-header d-flex justify-content-between align-items-center p-2">
+                <span class="fw-bold"><i class="bi bi-terminal"></i> Console</span>
+                <button id="console-toggle" class="btn btn-outline-secondary btn-sm" data-state="minimized" title="Toggle Console"><i class="bi bi-chevron-expand"></i></button>
+             </div>
+             <div id="console" class="card-body p-1 small overflow-auto" style="display: none;"></div> <!-- Initially hidden -->
         </div>
-        <div id="console"></div>
-      </div>
     </div>
   </div>
 
-  <div id="export-buttons">
-    <button id="export-html">Export HTML</button>
-    <button id="export-css">Export CSS</button>
-    <button id="export-js">Export JavaScript</button>
-    <button id="export-all">Export All (Complete HTML)</button>
-  </div>
+  <!-- Footer / Export Buttons -->
+  <footer class="container-fluid py-2 bg-body-tertiary border-top mt-auto"> <!-- Added mt-auto to push footer down -->
+    <div id="export-buttons" class="d-flex justify-content-center gap-2">
+        <button id="export-html" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Export HTML</button>
+        <button id="export-css" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Export CSS</button>
+        <button id="export-js" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Export JavaScript</button>
+        <button id="export-all" class="btn btn-sm btn-success"><i class="bi bi-file-earmark-zip"></i> Export All (HTML)</button>
+    </div>
+  </footer>
 
+  <!-- CodeMirror JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/htmlmixed/htmlmixed.min.js"></script>
+  <!-- CodeMirror Addons (Optional but useful) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closetag.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
+
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+  <!-- Custom Script -->
   <script src="script.js"></script>
 </body>
 </html>
