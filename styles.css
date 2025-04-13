@@ -1,184 +1,154 @@
+/* Ensure body takes full height and prevents scrolling issues */
 body {
-    margin: 0;
-    padding: 0;
-    font-family: sans-serif;
-    background: #f0f0f0;
-    height: 100vh; /* Important for proper resizing */
-    display: flex;
-    flex-direction: column;
+  overflow: hidden; /* Prevent body scrollbars */
 }
 
-header {
-    background: #333;
-    color: #fff;
-    padding: 10px 15px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-header h1 {
-    margin: 0;
-    font-size: 1.2em;
-}
-
+/* Main container adjustments */
 #main-container {
-    flex: 1; /* Grow to fill available space */
-    display: flex;
-    flex-direction: column;
+    gap: 0.5rem; /* Spacing between editor/output columns */
 }
 
-#editor-container {
-    display: flex;
-    flex-direction: row; /* Editors side-by-side */
-    flex: 1;
-    overflow: hidden; /*  Important for resizer to work */
+/* Make editor/output containers fill height */
+#editor-container, #output-container {
+    /* Use flex-basis for initial equal sizing, allow growth/shrink */
+    flex-basis: 50%;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0; /* Important for flex children in column layout */
+    min-width: 0; /* Important for flex children in row layout */
 }
 
+/* Editor panel styling */
 .editor-panel {
-    flex: 1;  /* Each editor takes equal space */
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /*  Important for resizer */
-    border-right: 1px solid #ccc; /* Separator between editors */
-    transition: width 0.3s ease, flex 0.3s ease; /* Smooth transitions */
-}
-.editor-panel.maximized {
-  flex: 1 1 100%; /* Take up all available space */
-  width: 100%;  /* Explicitly set width */
-}
-
-.editor-panel:last-child {
-    border-right: none;
+    flex: 1 1 33%; /* Allow panels to share space, basis 33% */
+    min-height: 50px; /* Minimum height when not minimized */
+    transition: flex 0.3s ease-in-out, min-height 0.3s ease-in-out; /* Smooth transitions */
+    overflow: hidden; /* Prevent content overflow when animating */
 }
 
 .editor-label {
-    margin-bottom: 5px;
-    font-weight: bold;
-    padding: 5px;
-    background-color: #ddd;
-    display: flex; /* Use flexbox for label layout */
-    justify-content: space-between; /* Space out label and button */
-    align-items: center; /* Vertically center items */
+    flex-shrink: 0; /* Prevent header from shrinking */
+    font-size: 0.85rem;
+    cursor: default; /* Indicate header is not draggable */
 }
 
-.maximize-button {
-    cursor: pointer;
-    padding: 2px 5px;
-    font-size: smaller;
-    margin-left: auto; /* Push button to the right */
+.editor-content {
+    height: 100%; /* Ensure content div fills space */
+    overflow: hidden; /* Hide scrollbars on the div, CodeMirror handles its own */
 }
 
+/* CodeMirror adjustments */
 .CodeMirror {
-    /* Don't set a fixed height here.  It will be controlled by resizing. */
-    border: 1px solid #ccc;
-    font-size: 14px;
-    flex-grow: 1; /*  Important: Allow CodeMirror to grow */
-    overflow: auto; /* Important for scrolling */
+  height: 100% !important; /* Force CodeMirror to fill its container */
+  font-size: 0.9rem;
+  border: 1px solid var(--bs-border-color); /* Use Bootstrap variable */
+  border-top: none; /* Remove top border as card-header has bottom border */
+  border-radius: 0 0 var(--bs-card-border-radius) var(--bs-card-border-radius); /* Match card radius */
 }
 
-#output-container {
-    display: flex;
-    flex-direction: column;
-    height: 50%; /* Adjust as needed */
+/* Adjust CodeMirror theme backgrounds to match Bootstrap theme */
+[data-bs-theme="light"] .cm-s-neat.CodeMirror {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+/* Ensure Monokai background is used in dark mode */
+[data-bs-theme="dark"] .cm-s-monokai.CodeMirror {
+     background-color: #272822; /* Explicit Monokai background */
+}
+
+/* Dark theme specific CodeMirror adjustments */
+[data-bs-theme="dark"] .CodeMirror {
+    border-color: var(--bs-border-color-translucent);
+}
+[data-bs-theme="dark"] .cm-s-neat .CodeMirror-gutters { /* Example: Light theme gutter in dark */
+    background-color: #f8f9fa; /* Or choose a suitable dark gutter color */
+    border-right: 1px solid #dee2e6;
+}
+[data-bs-theme="dark"] .cm-s-monokai .CodeMirror-gutters {
+    background: #272822; /* Monokai gutter */
+    border-right: 1px solid #3a3a3a; /* Darker border */
+}
+
+
+/* --- Minimize/Maximize States --- */
+
+/* State when a panel is minimized */
+.editor-panel.minimized {
+    flex-grow: 0;
+    flex-basis: auto; /* Let it shrink to content (header only) */
+    min-height: auto;
+    height: auto !important; /* Override other heights */
+}
+
+.editor-panel.minimized .editor-content {
+    display: none;
+}
+
+.editor-panel.minimized .btn-minimize i {
+    /* Change icon to restore */
+    content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-arrows-angle-expand' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707'/></svg>");
+}
+.editor-panel.minimized .btn-maximize i {
+    /* Ensure maximize icon remains */
+    content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-arrows-fullscreen' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707m0-4.344a.5.5 0 0 0-.707 0l-4.096-4.096V4.5a.5.5 0 1 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344 0a.5.5 0 0 1 .707 0l4.096-4.096V4.5a.5.5 0 1 1 1 0V.525a.5.5 0 0 1-.5-.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707'/></svg>");
+}
+
+/* State when a panel is maximized */
+#editor-container.has-maximized > .editor-panel:not(.maximized) {
+    display: none; /* Hide non-maximized panels */
+}
+
+.editor-panel.maximized {
+    flex-grow: 1;
+    flex-basis: 100%; /* Take full height */
+    height: 100%;
+    position: absolute; /* Take out of flow slightly for better control */
+    top: 0;
+    left: 0;
     width: 100%;
+    z-index: 10; /* Bring to front within its container */
+    transition: none; /* Maximize instantly */
 }
 
-#preview-container {
-    flex: 1; /* Preview takes most of the output space */
-    padding: 10px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    transition: height 0.3s ease, flex 0.3s ease; /* Add transition */
+/* Hide output when an editor is maximized */
+#editor-container.has-maximized + #output-container {
+    display: none !important;
+}
+/* Optional: Maximize output container - similar logic if needed */
+
+
+.editor-panel.maximized .btn-maximize i {
+     /* Change icon to restore/minimize */
+    content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-arrows-angle-contract' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M.172 15.828a.5.5 0 0 0 .707 0l4.096-4.096V14.5a.5.5 0 1 0 1 0v-3.975a.5.5 0 0 0-.5-.5H1.5a.5.5 0 0 0 0 1h2.768L.172 15.121a.5.5 0 0 0 0 .707M15.828.172a.5.5 0 0 0-.707 0l-4.096 4.096V1.5a.5.5 0 1 0-1 0v3.975a.5.5 0 0 0 .5.5H14.5a.5.5 0 0 0 0-1h-2.768L15.828.879a.5.5 0 0 0 0-.707'/></svg>");
+}
+.editor-panel.maximized .btn-minimize i {
+     /* Ensure minimize icon remains */
+    content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-dash-lg' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8'/></svg>");
 }
 
-#preview-container.maximized {
-  flex: 1 1 100%;
-  height: 100%;
-}
 
-#preview {
-    width: 100%;
-    height: 100%; /* Fill its container */
-    border: 1px solid #ccc;
-}
-
+/* Console Styling */
 #console-container {
-    padding: 0px;
-    box-sizing: border-box;
-    height: 20px; /* Initial minimized height */
-    transition: height 0.3s ease; /* Smooth transition for minimize/maximize */
-    border-top: 1px solid #ccc;
+    transition: max-height 0.3s ease-in-out;
 }
-
-#console-container.maximized {
-    height: 200px; /* Maximized height */
+#console-container.expanded {
+    max-height: 50%; /* Or desired expanded height */
 }
 
 #console {
-    width: 100%;
-    height: calc(100% - 25px);  /*  Account for label height */
-    background: #000;
-    color: #0f0;
-    overflow-y: auto;
-    padding: 5px;
     font-family: monospace;
-    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background-color: var(--bs-tertiary-bg);
 }
 
-#console-toggle {
-    cursor: pointer;
-    padding: 2px 5px;
-    font-size: smaller;
-}
-.console-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 2px 5px;
-    background-color: #ddd;
-
+/* Adjust console toggle icon */
+#console-toggle.expanded i {
+     /* Change icon to collapse */
+    content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-chevron-contract' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M1.646 13.854a.5.5 0 0 0 .708 0L8 8.207l5.646 5.647a.5.5 0 0 0 .708-.708l-6-6a.5.5 0 0 0-.708 0l-6 6a.5.5 0 0 0 0 .708m12.708-11.708a.5.5 0 0 1-.708 0L8 7.793 2.354 2.146a.5.5 0 1 1 .708-.708l5.292 5.292 5.292-5.292a.5.5 0 0 1 .708 0'/></svg>");
 }
 
-#export-buttons {
-    padding: 10px;
-    text-align: center;
-    background-color: #f0f0f0;
-}
-
-#export-buttons button {
-    margin: 5px;
-    padding: 8px 12px;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-/* Resizer Styles */
-.resizer {
-    width: 5px;
-    background-color: #aaa;
-    cursor: ew-resize; /* Horizontal resize cursor */
-    position: relative; /* For absolute positioning of the handle */
-}
-.resizer::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 1px;
-    height: 30px; /* Or whatever size you like */
-    background-color: #666; /* Darker color for better visibility */
-}
-
-.error-line {
-    background-color: rgba(255, 0, 0, 0.2); /* Light red background for errors */
-}
-
-/* Responsive adjustments (optional) */
-@media (max-width: 768px) {
-    #editor-container {
-    flex-direction: column; /* Stack editors vertically on small screens */
-    }
+/* Footer */
+footer {
+    flex-shrink: 0; /* Prevent footer from shrinking */
 }
