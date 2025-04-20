@@ -1,494 +1,396 @@
+console.log("--- script.js started ---");
+
 document.addEventListener('DOMContentLoaded', () => {
-    // --- CodeMirror Initialization ---
-    const htmlEditor = CodeMirror.fromTextArea(document.getElementById('html-editor'), {
-        lineNumbers: true,
-        mode: 'htmlmixed',
-        theme: 'neat', // Start with light theme (will be updated by theme loader)
-        lineWrapping: true,
-        autoCloseTags: true // Enable addon
-    });
+    console.log("--- DOMContentLoaded fired ---");
 
-    const cssEditor = CodeMirror.fromTextArea(document.getElementById('css-editor'), {
-        lineNumbers: true,
-        mode: 'css',
-        theme: 'neat', // Start with light theme
-        lineWrapping: true,
-        autoCloseBrackets: true // Enable addon
-    });
-
-    const jsEditor = CodeMirror.fromTextArea(document.getElementById('js-editor'), {
-        lineNumbers: true,
-        mode: 'javascript',
-        theme: 'neat', // Start with light theme
-        lineWrapping: true,
-        autoCloseBrackets: true // Enable addon
-    });
-
-    // --- DOM Element References ---
-    const previewFrame = document.getElementById('preview');
+    // --- Element Selection ---
+    const htmlEditorElement = document.getElementById('html-editor');
+    const cssEditorElement = document.getElementById('css-editor');
+    const jsEditorElement = document.getElementById('js-editor');
+    const previewFrame = document.getElementById('preview'); // Inline preview iframe
+    const themeToggleButton = document.getElementById('theme-toggle');
+    const themeIconLight = themeToggleButton?.querySelector('.theme-icon-light');
+    const themeIconDark = themeToggleButton?.querySelector('.theme-icon-dark');
     const editorContainer = document.getElementById('editor-container');
-    const consoleElement = document.getElementById('console');
-    const consoleToggleBtn = document.getElementById('console-toggle');
     const consoleContainer = document.getElementById('console-container');
-    const previewMaximizeBtn = document.getElementById('preview-fullscreen-btn'); // Button for preview maximize/restore
-    const mainContainer = document.getElementById('main-container'); // Main content area container
-    const themeToggle = document.getElementById('theme-toggle');
-    const sunIcon = themeToggle.querySelector('.bi-sun-fill');
-    const moonIcon = themeToggle.querySelector('.bi-moon-stars-fill');
-    const htmlElement = document.documentElement;
+    const consoleElement = document.getElementById('console');
+    const consoleToggleButton = document.getElementById('console-toggle');
+    const previewFullscreenButton = document.getElementById('preview-fullscreen-btn'); // Button to trigger modal
+    const mainContainer = document.getElementById('main-container');
+    const previewModalElement = document.getElementById('previewModal'); // The modal element
+    const modalPreviewFrame = document.getElementById('modal-preview-iframe'); // Iframe inside the modal
 
-    // Store editors in an object for easy access by ID
-    const editors = {
-        html: htmlEditor,
-        css: cssEditor,
-        js: jsEditor
-    };
+    const STORAGE_KEY_PREFIX = 'webEditor_';
 
-    // --- Update Preview ---
-    let previewTimeout;
-    function updatePreview() {
-        // Debounce preview update slightly to avoid excessive updates during typing
-        clearTimeout(previewTimeout);
-        previewTimeout = setTimeout(() => {
-            const htmlCode = htmlEditor.getValue();
-            const cssCode = `<style>${cssEditor.getValue()}</style>`;
-            // Use a try-catch block for basic JS syntax check before injecting
-            let jsCodeToRun = '';
-            try {
-                // Basic check if JS is not empty before trying to wrap it
-                const rawJs = jsEditor.getValue();
-                if (rawJs.trim()) {
-                     // This doesn't actually run the JS here, just prepares the string
-                    jsCodeToRun = `<script>${rawJs.replace(/<\/script>/gi, '<\\/script>')}<\/script>`; // Escape closing script tag carefully
+    // --- Initial Checks ---
+    console.log("Attempting to find elements...");
+    // Added checks for modal elements
+    if (!htmlEditorElement || !cssEditorElement || !jsEditorElement || !previewFrame || !themeToggleButton || !editorContainer || !consoleContainer || !consoleElement || !consoleToggleButton || !previewFullscreenButton || !mainContainer || !previewModalElement || !modalPreviewFrame) {
+        console.error("!!! CRITICAL: One or more essential elements not found (including modal elements). Check IDs in HTML match the script. !!!");
+        alert("Initialization Error: Could not find all required page elements. Check console for details.");
+        return;
+    } else {
+        console.log("All essential elements found.");
+    }
+
+    if (typeof CodeMirror === 'undefined') {
+         console.error("!!! CRITICAL: CodeMirror library not loaded. Check CDN links/defer attribute in HTML. !!!");
+         alert("Initialization Error: CodeMirror library failed to load. Check console for details.");
+         return;
+    } else {
+        console.log("CodeMirror library found.");
+    }
+
+     // --- Bootstrap Modal Instance ---
+    let previewModalInstance = null;
+    try {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+             previewModalInstance = new bootstrap.Modal(previewModalElement);
+             console.log("Bootstrap Modal instance created.");
+        } else {
+            console.error("!!! CRITICAL: Bootstrap JavaScript not loaded or Modal component missing. !!!");
+            alert("Initialization Error: Bootstrap Modal component failed to load. Check console for details.");
+            // Don't necessarily return, maybe other features can still work?
+        }
+    } catch(e) {
+        console.error("!!! CRITICAL: Error initializing Bootstrap Modal. !!!", e);
+        alert("Initialization Error: Could not initialize preview modal. Check console for details.");
+    }
+
+
+    // --- Utility Functions ---
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    function loadFromLocalStorage(key, defaultValue = '') {
+        try {
+            const value = localStorage.getItem(STORAGE_KEY_PREFIX + key);
+            // console.log(`Loaded '${key}' from localStorage:`, value !== null ? `${value.substring(0, 50)}...` : 'null');
+            return value || defaultValue;
+        } catch (e) {
+            console.warn(`Could not load '${key}' from localStorage:`, e);
+            return defaultValue;
+        }
+    }
+
+    function saveToLocalStorage(key, value) {
+        try {
+            localStorage.setItem(STORAGE_KEY_PREFIX + key, value);
+            // console.log(`Saved '${key}' to localStorage.`);
+        } catch (e) {
+            console.warn(`Could not save '${key}' to localStorage:`, e);
+             if (e.name === 'QuotaExceededError') {
+                alert('Could not save changes. Browser local storage might be full.');
+            }
+        }
+    }
+
+    // --- CodeMirror Initialization ---
+    console.log("Initializing CodeMirror editors...");
+    let editors;
+    try {
+        const commonConfig = {
+            lineNumbers: true,
+            autoCloseTags: true,
+            autoCloseBrackets: true,
+            lineWrapping: true,
+        };
+        const initialHtml = loadFromLocalStorage('html');
+        const initialCss = loadFromLocalStorage('css');
+        const initialJs = loadFromLocalStorage('js');
+        const htmlEditor = CodeMirror.fromTextArea(htmlEditorElement, { ...commonConfig, mode: 'htmlmixed', theme: 'neat', value: initialHtml });
+        const cssEditor = CodeMirror.fromTextArea(cssEditorElement, { ...commonConfig, mode: 'css', theme: 'neat', value: initialCss });
+        const jsEditor = CodeMirror.fromTextArea(jsEditorElement, { ...commonConfig, mode: 'javascript', theme: 'neat', value: initialJs });
+        editors = { html: htmlEditor, css: cssEditor, js: jsEditor };
+        console.log("CodeMirror editors initialized successfully.");
+    } catch (error) {
+        console.error("!!! CRITICAL: Failed to initialize CodeMirror editors. !!!", error);
+        alert("Initialization Error: Failed to create code editors. Check console for details.");
+        return;
+    }
+
+    // --- Function to build the preview content (srcDoc) ---
+    function buildPreviewSrcDoc() {
+        const htmlCode = editors.html.getValue();
+        const cssCode = editors.css.getValue();
+        const jsCode = editors.js.getValue();
+
+        // Console interception script (same as before)
+        const consoleInterceptor = `
+            <script>
+                const originalConsoleLog = console.log;
+                const originalConsoleError = console.error;
+                const originalConsoleWarn = console.warn;
+                const originalConsoleInfo = console.info;
+                // Get console element from the main window (parent)
+                const parentConsole = window.parent.document.getElementById('console');
+
+                function formatMessageArgs(args) {
+                    return Array.from(args).map(arg => {
+                         if (arg instanceof Error) { return arg.stack || arg.toString(); }
+                         else if (typeof arg === 'object' && arg !== null) {
+                            try { return JSON.stringify(arg, null, 2); } catch (e) { return '[Unserializable Object]'; }
+                        }
+                        return String(arg);
+                    }).join(' ');
                 }
-            } catch (e) {
-                console.error("JavaScript Syntax Error prevented preview update:", e);
-                 const errorEntry = document.createElement('div');
-                 errorEntry.style.color = 'var(--bs-warning)'; // Use warning color
-                 errorEntry.textContent = `Preview JS Error (check browser console): ${e.message}`;
-                 consoleElement.appendChild(errorEntry);
+
+                function postMessageToParent(type, args) {
+                     // Only post if running in an iframe context where parent console exists
+                     if (!parentConsole || window.self === window.top) return;
+                     const message = formatMessageArgs(args);
+                     try {
+                         const pre = window.parent.document.createElement('pre'); // Use parent document
+                         pre.className = 'console-' + type;
+                         pre.textContent = message;
+                         parentConsole.appendChild(pre);
+                         parentConsole.scrollTop = parentConsole.scrollHeight;
+                     } catch (e) {
+                         // Fallback if direct parent manipulation fails (e.g., stricter sandboxing)
+                         originalConsoleError('Error posting message to parent console:', e);
+                     }
+                }
+
+                console.log = (...args) => { originalConsoleLog.apply(console, args); postMessageToParent('log', args); };
+                console.error = (...args) => { originalConsoleError.apply(console, args); postMessageToParent('error', args); };
+                console.warn = (...args) => { originalConsoleWarn.apply(console, args); postMessageToParent('warn', args); };
+                console.info = (...args) => { originalConsoleInfo.apply(console, args); postMessageToParent('info', args); };
+
+                window.onerror = function(message, source, lineno, colno, error) {
+                    const errorArgs = [message, 'at', source + ':' + lineno + ':' + colno];
+                    if (error && error.stack) { errorArgs.push('\\nStack: ' + error.stack); }
+                    postMessageToParent('error', errorArgs);
+                };
+                window.onunhandledrejection = function(event) {
+                    postMessageToParent('error', ['Unhandled Promise Rejection:', event.reason]);
+                };
+            <\/script>
+        `;
+
+        return `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>${cssCode}</style>
+            </head>
+            <body>
+                ${htmlCode}
+                ${consoleInterceptor}
+                <script>
+                    try {
+                        ${jsCode}
+                    } catch (e) {
+                        console.error('Error executing user script:', e);
+                    }
+                <\/script>
+            </body>
+            </html>
+        `;
+    }
+
+
+    // --- Live Preview Update (for inline preview) ---
+    const updateInlinePreview = debounce(() => {
+        // console.log("Updating inline preview...");
+        try {
+            const srcDoc = buildPreviewSrcDoc(); // Build the content
+
+            // Save current code to Local Storage
+            saveToLocalStorage('html', editors.html.getValue());
+            saveToLocalStorage('css', editors.css.getValue());
+            saveToLocalStorage('js', editors.js.getValue());
+
+            consoleElement.innerHTML = ''; // Clear console before running new code
+            previewFrame.srcdoc = srcDoc; // Update the inline iframe
+            // console.log("Inline preview update complete.");
+        } catch (error) {
+            console.error("Error during inline preview update:", error);
+             if(consoleElement) {
+                 const pre = document.createElement('pre');
+                 pre.className = 'console-error';
+                 pre.textContent = `Editor Error: Failed to update inline preview.\n${error.stack || error}`;
+                 consoleElement.appendChild(pre);
                  consoleElement.scrollTop = consoleElement.scrollHeight;
             }
+        }
+    }, 300);
 
+    editors.html.on('change', updateInlinePreview);
+    editors.css.on('change', updateInlinePreview);
+    editors.js.on('change', updateInlinePreview);
 
-            const combinedCode = `
-                <!DOCTYPE html>
-                <html lang="en">
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Preview</title>
-                    ${cssCode}
-                    <script>
-                        // Capture console logs from iframe
-                        window.console.log = (...args) => {
-                            // Convert arguments to serializable format if needed
-                            const serializableArgs = args.map(arg => {
-                                try {
-                                    // Basic check for non-serializable types (like functions, Symbols)
-                                    if (typeof arg === 'function' || typeof arg === 'symbol') {
-                                        return arg.toString();
-                                    }
-                                    // Attempt to clone, fallback to string conversion
-                                    return JSON.parse(JSON.stringify(arg));
-                                } catch (e) {
-                                    return String(arg); // Fallback for complex/circular objects
-                                }
-                            });
-                            window.parent.postMessage({ type: 'log', args: serializableArgs }, '*');
-                        };
-                        // Capture errors from iframe
-                        window.onerror = function(message, source, lineno, colno, error) {
-                             window.parent.postMessage({ type: 'error', message: message, lineno: lineno }, '*');
-                             return true; // Prevent default browser error handling in iframe console
-                         };
-                    <\/script>
-                </head>
-                <body>
-                    ${htmlCode}
-                    ${jsCodeToRun}
-                </body>
-                </html>
-            `;
-
-            // Use srcdoc for security and simplicity
-            previewFrame.srcdoc = combinedCode;
-
-        }, 300); // 300ms debounce delay
+    // --- Theme Toggling ---
+    const savedTheme = loadFromLocalStorage('theme', 'light');
+    function applyTheme(theme) {
+        const cmTheme = theme === 'light' ? 'neat' : 'monokai';
+        document.documentElement.setAttribute('data-bs-theme', theme);
+        Object.values(editors).forEach(editor => editor.setOption('theme', cmTheme));
+        themeIconLight?.classList.toggle('d-none', theme === 'dark');
+        themeIconDark?.classList.toggle('d-none', theme === 'light');
+         // console.log("Applied theme:", theme);
     }
-
-    // Update preview on editor changes
-    htmlEditor.on('change', updatePreview);
-    cssEditor.on('change', updatePreview);
-    jsEditor.on('change', updatePreview);
-
-
-    // --- Console Logging (Capture from iframe and direct calls) ---
-    const originalConsoleLog = console.log; // Keep reference to original browser console.log
-
-    function logToEditorConsole(...args) {
-         const message = args.map(arg => {
-             if (arg === undefined) return 'undefined';
-             if (arg === null) return 'null';
-             // Attempt to stringify objects, handle potential circular refs
-             if (typeof arg === 'object') {
-                try {
-                    // Use JSON.stringify with a replacer to handle potential errors/BigInts/Functions/Symbols
-                    return JSON.stringify(arg, (key, value) => {
-                        if (typeof value === 'bigint') return value.toString() + 'n';
-                        if (typeof value === 'function') return `[Function ${value.name || ''}]`;
-                         if (typeof value === 'symbol') return value.toString();
-                         if (value instanceof Error) return `[Error: ${value.message}]`;
-                        return value;
-                    }, 2); // Indent with 2 spaces
-                } catch (e) {
-                    // Handle circular structure or other errors
-                    if (e instanceof TypeError && e.message.includes('circular structure')) {
-                         return '[Circular Object]';
-                    }
-                    return '[Unserializable Object]';
-                }
-            }
-            return String(arg);
-        }).join(' ');
-
-        const logEntry = document.createElement('div');
-        logEntry.textContent = `> ${message}`;
-        consoleElement.appendChild(logEntry);
-        consoleElement.scrollTop = consoleElement.scrollHeight; // Auto-scroll
-    }
-
-     // Override window.console.log to capture logs in the editor's console div
-     console.log = function(...args) {
-        originalConsoleLog.apply(console, args); // Log to browser console as well
-        logToEditorConsole(...args); // Log to the editor's console
-    };
-
-     // Capture errors from the main window context
-     window.onerror = function(message, source, lineno, colno, error) {
-        originalConsoleLog.error("Error:", message, "at", source, ":", lineno, error); // Log full error to browser console
-        const errorEntry = document.createElement('div');
-        errorEntry.style.color = 'var(--bs-danger)'; // Use Bootstrap's danger color
-        errorEntry.textContent = `Error: ${message} (line ${lineno})`;
-        consoleElement.appendChild(errorEntry);
-        consoleElement.scrollTop = consoleElement.scrollHeight;
-        return true; // Prevent default browser error handling
-    };
-
-     // Listen for messages (logs/errors) from the iframe
-     window.addEventListener('message', (event) => {
-         // Security check: Allow messages only from the same origin ('null' for srcdoc is okay here)
-         if (event.origin !== 'null' && event.origin !== window.location.origin) {
-             console.warn("Blocked message from untrusted origin:", event.origin);
-             return;
-         }
-
-         const data = event.data;
-         if (data && data.type === 'log') {
-             logToEditorConsole(...data.args);
-         } else if (data && data.type === 'error') {
-              const errorEntry = document.createElement('div');
-              errorEntry.style.color = 'var(--bs-danger)';
-              errorEntry.textContent = `Error (Preview): ${data.message} (line ${data.lineno})`;
-              consoleElement.appendChild(errorEntry);
-              consoleElement.scrollTop = consoleElement.scrollHeight;
-         }
-     });
-
+    themeToggleButton.addEventListener('click', () => {
+        // console.log("Toggling theme...");
+        try {
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+            saveToLocalStorage('theme', newTheme);
+        } catch (error) {
+            console.error("Error toggling theme:", error);
+        }
+    });
+    applyTheme(savedTheme); // Apply initial theme
 
     // --- Console Toggle ---
-    consoleToggleBtn.addEventListener('click', () => {
-        const isMinimized = consoleToggleBtn.dataset.state === 'minimized';
-        const icon = consoleToggleBtn.querySelector('i');
-
-        if (isMinimized) {
-            consoleContainer.classList.add('expanded');
-            consoleElement.style.display = 'block'; // Make visible before transition starts
-            consoleToggleBtn.dataset.state = 'expanded';
-            consoleToggleBtn.title = 'Minimize Console';
-            // Icon change handled by CSS attribute selector [data-state="expanded"]
-
-        } else {
-            consoleContainer.classList.remove('expanded');
-            consoleToggleBtn.dataset.state = 'minimized';
-            consoleToggleBtn.title = 'Expand Console';
-             // Icon change handled by CSS attribute selector [data-state="minimized"]
-
-             // Delay hiding until transition finishes (approx 300ms from CSS)
-             // Check state again in case of rapid clicks before timeout fires
-             setTimeout(() => {
-                 if (consoleToggleBtn.dataset.state === 'minimized') {
-                      consoleElement.style.display = 'none';
-                 }
-            }, 300);
+    consoleToggleButton.addEventListener('click', () => {
+        // console.log("Toggling console...");
+        try {
+            const consoleWrapper = consoleContainer;
+            const isExpanded = consoleWrapper.classList.toggle('expanded');
+            const icon = consoleToggleButton.querySelector('i');
+            consoleToggleButton.setAttribute('aria-expanded', isExpanded);
+             if (icon) {
+                icon.classList.toggle('bi-chevron-expand', !isExpanded);
+                icon.classList.toggle('bi-chevron-contract', isExpanded);
+            }
+            consoleToggleButton.title = isExpanded ? 'Collapse Console' : 'Expand Console';
+            // console.log("Console expanded:", isExpanded);
+        } catch (error) {
+            console.error("Error toggling console:", error);
         }
     });
 
-
-    // --- Function to Restore All Maximize States (Helper) ---
-    function restoreAllMaximizeStates() {
-        let needsRefresh = false;
-
-        // Restore editor maximize state
-        if (editorContainer.classList.contains('has-maximized')) {
-            editorContainer.querySelectorAll('.editor-panel.maximized').forEach(p => {
-                p.classList.remove('maximized');
-                const maxBtn = p.querySelector('.btn-maximize');
-                maxBtn.title = 'Maximize';
-                // Icon reset is handled by CSS removing .maximized class
-            });
-            editorContainer.classList.remove('has-maximized');
-            needsRefresh = true;
-        }
-
-        // Restore preview maximize state
-        if (mainContainer.classList.contains('preview-maximized')) {
-            mainContainer.classList.remove('preview-maximized');
-            previewMaximizeBtn.title = 'Maximize Preview';
-            previewMaximizeBtn.classList.remove('restore-internal');
-            previewMaximizeBtn.classList.add('maximize-internal');
-            // Icon reset is handled by CSS removing .restore-internal class
-            needsRefresh = true;
-        }
-
-        // Refresh editors only if a state was actually changed
-        if (needsRefresh) {
-            setTimeout(() => {
-                Object.values(editors).forEach(ed => ed.refresh());
-            }, 50); // Small delay for layout to settle
-        }
-    }
-
-
-    // --- Editor Panel Actions (Minimize, Maximize, Clear) ---
+     // --- Editor Panel Controls (Event Delegation - No changes needed here) ---
     editorContainer.addEventListener('click', (event) => {
         const button = event.target.closest('button');
         if (!button) return;
         const panel = button.closest('.editor-panel');
         if (!panel) return;
         const editorId = panel.dataset.editorId;
+        if (!editorId || !editors[editorId]) return;
         const editor = editors[editorId];
-
-        // Clear Action
-        if (button.classList.contains('btn-clear')) {
-            if (editor) {
-                editor.setValue(''); // Clears content, triggers 'change' -> updatePreview
-            }
-        }
-        // Minimize/Restore Action
-        else if (button.classList.contains('btn-minimize')) {
-            // If preview is maximized, restore everything first
-            if (mainContainer.classList.contains('preview-maximized')) {
-                restoreAllMaximizeStates();
-            }
-             // If another editor is maximized, restore it first
-             if (editorContainer.classList.contains('has-maximized') && !panel.classList.contains('maximized')) {
-                 restoreAllMaximizeStates();
-             }
-
-            const isMinimized = panel.classList.toggle('minimized');
-            button.title = isMinimized ? 'Restore' : 'Minimize';
-            // Icon change is handled by CSS based on .minimized class
-
-            // If restoring, ensure it's not marked as maximized
-            if (!isMinimized) {
-                 panel.classList.remove('maximized');
-                 // Maximize button state might need resetting if it was maximized *then* minimized
-                 const maxBtn = panel.querySelector('.btn-maximize');
-                 maxBtn.title = 'Maximize';
-            } else {
-                // If minimizing, ensure it's removed from maximized state
-                panel.classList.remove('maximized');
-                editorContainer.classList.remove('has-maximized'); // Ensure container state is correct
-                const maxBtn = panel.querySelector('.btn-maximize');
-                maxBtn.title = 'Maximize';
-            }
-
-            // Refresh this editor's layout
-            setTimeout(() => editor?.refresh(), 50);
-        }
-        // Maximize/Restore Action (Editor Panel)
-        else if (button.classList.contains('btn-maximize')) {
-             // If preview is maximized, restore it first
-             if (mainContainer.classList.contains('preview-maximized')) {
-                 restoreAllMaximizeStates();
-             }
-
-            const isCurrentlyMaximized = panel.classList.contains('maximized');
-
-            // Always restore all other editor panels first
-            editorContainer.querySelectorAll('.editor-panel').forEach(p => {
-                if (p !== panel) {
-                     p.classList.remove('maximized'); // Remove maximized from others
-                     // Don't remove 'minimized' state here, only reset maximize button
-                     const maxBtn = p.querySelector('.btn-maximize');
-                     maxBtn.title = 'Maximize';
+        const icon = button.querySelector('i');
+        // console.log(`Button clicked in panel '${editorId}':`, button.className);
+        try {
+            if (button.classList.contains('btn-minimize')) { /* ... minimize logic ... */
+                const isMinimized = panel.classList.toggle('minimized');
+                const isExpanded = !isMinimized;
+                button.setAttribute('aria-expanded', isExpanded);
+                if (icon) {
+                    icon.classList.toggle('bi-dash-lg', isExpanded);
+                    icon.classList.toggle('bi-plus-lg', isMinimized);
                 }
-            });
-
-             editorContainer.classList.remove('has-maximized'); // Reset container state initially
-
-
-            if (!isCurrentlyMaximized) {
-                // Maximize the current panel
-                panel.classList.remove('minimized'); // Ensure it's not minimized
-                panel.classList.add('maximized');
-                button.title = 'Restore';
-                editorContainer.classList.add('has-maximized'); // Set container state
-                 // Icon change handled by CSS
-            } else {
-                 // If it was currently maximized, clicking again restores it
-                 panel.classList.remove('maximized');
-                 button.title = 'Maximize';
-                  // Container state already removed above
-                 // Icon change handled by CSS
+                button.title = isExpanded ? 'Minimize' : 'Restore';
+                if (isExpanded) { setTimeout(() => editor.refresh(), 350); }
             }
-
-            // Refresh all editors' layout after potential major shift
-             setTimeout(() => {
-                 Object.values(editors).forEach(ed => ed.refresh());
-             }, 50);
-        }
+            else if (button.classList.contains('btn-maximize')) { /* ... maximize logic ... */
+                 const isCurrentlyMaximized = panel.classList.contains('maximized');
+                let restoreMode = false;
+                const currentlyMaximizedPanel = editorContainer.querySelector('.editor-panel.maximized');
+                if (currentlyMaximizedPanel) {
+                    currentlyMaximizedPanel.classList.remove('maximized');
+                    const maxBtn = currentlyMaximizedPanel.querySelector('.btn-maximize');
+                    const maxIcon = maxBtn?.querySelector('i');
+                    if (maxIcon) maxIcon.classList.replace('bi-arrows-angle-contract', 'bi-arrows-fullscreen');
+                    if (maxBtn) maxBtn.title = 'Maximize';
+                    if (currentlyMaximizedPanel === panel) restoreMode = true;
+                    if (restoreMode) editorContainer.classList.remove('has-maximized');
+                }
+                if (!restoreMode) {
+                    panel.classList.add('maximized');
+                    editorContainer.classList.add('has-maximized');
+                    if (icon) icon.classList.replace('bi-arrows-fullscreen', 'bi-arrows-angle-contract');
+                    button.title = 'Restore';
+                }
+                setTimeout(() => Object.values(editors).forEach(ed => ed.refresh()), 50);
+            }
+            else if (button.classList.contains('btn-clear')) { editor.setValue(''); }
+            else if (button.classList.contains('btn-copy')) { /* ... copy logic ... */
+                const code = editor.getValue();
+                try {
+                    if (navigator.clipboard && code) {
+                        navigator.clipboard.writeText(code).then(() => {
+                            const originalIconClass = 'bi-clipboard';
+                            const successIconClass = 'bi-clipboard-check-fill';
+                            if (icon) icon.classList.replace(originalIconClass, successIconClass);
+                            button.classList.add('copied', 'btn-success'); button.classList.remove('btn-outline-secondary'); button.title = 'Copied!';
+                            setTimeout(() => {
+                                if (icon) icon.classList.replace(successIconClass, originalIconClass);
+                                button.classList.remove('copied', 'btn-success'); button.classList.add('btn-outline-secondary'); button.title = 'Copy Code';
+                            }, 1500);
+                        }).catch(err => { console.error(`Copy failed:`, err); button.title = 'Copy Failed!'; setTimeout(() => { button.title = 'Copy Code'; }, 1500); });
+                    } else if (!code) { button.title = 'Nothing to copy!'; setTimeout(() => { button.title = 'Copy Code'; }, 1000); }
+                    else { console.warn("Clipboard API not available."); button.title = 'Copy not supported'; setTimeout(() => { button.title = 'Copy Code'; }, 2000); }
+                } catch(copyError) { console.error(`Clipboard error:`, copyError); button.title = 'Copy Error!'; setTimeout(() => { button.title = 'Copy Code'; }, 1500); }
+            }
+        } catch (error) { console.error(`Button click error (${editorId}):`, error); }
     });
 
-
-    // --- Preview Maximize/Restore (within App) ---
-    previewMaximizeBtn.addEventListener('click', () => {
-        const isPreviewMaximized = mainContainer.classList.contains('preview-maximized');
-
-        // If any editor is maximized, restore it first before maximizing preview
-        if (editorContainer.classList.contains('has-maximized')) {
-             restoreAllMaximizeStates();
+    // --- MODIFIED: Preview Modal Trigger ---
+    previewFullscreenButton.addEventListener('click', () => {
+        console.log("Preview modal button clicked.");
+        if (!previewModalInstance) {
+            console.error("Modal instance not available!");
+            alert("Error: Preview modal could not be initialized.");
+            return;
         }
+        try {
+            console.log("Building content for modal...");
+            const srcDoc = buildPreviewSrcDoc(); // Generate the latest preview content
 
-        // Toggle the preview maximized state
-        mainContainer.classList.toggle('preview-maximized');
+            console.log("Setting modal iframe srcdoc...");
+            modalPreviewFrame.srcdoc = srcDoc; // Set the content of the iframe *inside* the modal
 
-        // Update button title and classes based on the new state
-        if (mainContainer.classList.contains('preview-maximized')) {
-            previewMaximizeBtn.title = 'Restore Preview';
-            previewMaximizeBtn.classList.remove('maximize-internal');
-            previewMaximizeBtn.classList.add('restore-internal');
-             // Icon change handled by CSS
-        } else {
-            previewMaximizeBtn.title = 'Maximize Preview';
-            previewMaximizeBtn.classList.remove('restore-internal');
-            previewMaximizeBtn.classList.add('maximize-internal');
-             // Icon change handled by CSS
+            console.log("Showing modal...");
+            previewModalInstance.show(); // Show the modal
+            console.log("Modal shown.");
+
+        } catch (error) {
+            console.error("Error preparing or showing preview modal:", error);
+            alert("Error: Could not open preview modal. Check console for details.");
         }
-
-         // Refresh editors after layout change (especially needed when restoring)
-        setTimeout(() => {
-            Object.values(editors).forEach(ed => ed.refresh());
-        }, 50);
     });
+    // --- End MODIFIED Section ---
 
 
-    // --- Light/Dark Theme Toggle ---
-    const applyTheme = (theme) => {
-        htmlElement.setAttribute('data-bs-theme', theme);
-        // Choose CodeMirror theme based on Bootstrap theme
-        const codeMirrorTheme = theme === 'dark' ? 'monokai' : 'neat';
-
-        // Apply theme to all editors
-        Object.values(editors).forEach(editor => {
-            editor.setOption('theme', codeMirrorTheme);
-        });
-
-        // Update toggle button icon visibility
-        if (theme === 'dark') {
-            sunIcon.classList.add('d-none');
-            moonIcon.classList.remove('d-none');
-        } else {
-            sunIcon.classList.remove('d-none');
-            moonIcon.classList.add('d-none');
-        }
-         localStorage.setItem('editorTheme', theme); // Save preference
-    };
-
-    themeToggle.addEventListener('click', () => {
-        const currentTheme = htmlElement.getAttribute('data-bs-theme') || 'light';
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        applyTheme(newTheme);
-    });
-
-    // Load saved theme or detect OS preference on startup
-    const savedTheme = localStorage.getItem('editorTheme');
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-    applyTheme(initialTheme); // Apply the determined theme
-
-
-    // --- Export Functionality ---
-    function downloadFile(filename, content, mimeType) {
-        const blob = new Blob([content], { type: mimeType });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = filename;
-        document.body.appendChild(link); // Append to body for Firefox compatibility
-        link.click();
-        document.body.removeChild(link); // Clean up
-        URL.revokeObjectURL(link.href); // Release object URL memory
+    // --- Export Functionality (No changes needed here) ---
+    function triggerDownload(filename, content, mimeType) {
+        try {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+            // console.log(`Triggered download for ${filename}`);
+        } catch (error) { console.error(`Download error (${filename}):`, error); alert(`Failed download for ${filename}.`); }
     }
-
-    document.getElementById('export-html').addEventListener('click', () => {
-        downloadFile('index.html', htmlEditor.getValue(), 'text/html;charset=utf-8');
+    document.getElementById('export-html')?.addEventListener('click', () => triggerDownload('index.html', editors.html.getValue(), 'text/html'));
+    document.getElementById('export-css')?.addEventListener('click', () => triggerDownload('style.css', editors.css.getValue(), 'text/css'));
+    document.getElementById('export-js')?.addEventListener('click', () => triggerDownload('script.js', editors.js.getValue(), 'application/javascript'));
+    document.getElementById('export-all')?.addEventListener('click', () => {
+        try {
+            const htmlCode = editors.html.getValue(); const cssCode = editors.css.getValue(); const jsCode = editors.js.getValue();
+            const fullHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Exported Project</title><style>${cssCode}</style></head><body>${htmlCode}<script>(function(){try{${jsCode}}catch(e){console.error("Error executing embedded script:",e);}})();<\/script></body></html>`;
+            triggerDownload('project.html', fullHtml, 'text/html');
+        } catch (error) { console.error("Export All error:", error); alert('Failed export all.'); }
     });
 
-    document.getElementById('export-css').addEventListener('click', () => {
-        downloadFile('styles.css', cssEditor.getValue(), 'text/css;charset=utf-8');
-    });
+    // --- Initial Preview Render ---
+    console.log("Performing initial inline preview render.");
+    updateInlinePreview(); // Render the inline preview on load
 
-    document.getElementById('export-js').addEventListener('click', () => {
-        downloadFile('script.js', jsEditor.getValue(), 'text/javascript;charset=utf-8');
-    });
-
-    document.getElementById('export-all').addEventListener('click', () => {
-        const htmlCode = htmlEditor.getValue();
-        const cssCode = cssEditor.getValue();
-        const jsCode = jsEditor.getValue();
-
-        // Construct the full HTML file content
-        const fullHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exported Project</title>
-    <style>
-/* --- CSS Code --- */
-${cssCode}
-    </style>
-</head>
-<body>
-<!-- === HTML Code === -->
-${htmlCode}
-
-    <!-- === JavaScript Code === -->
-    <script>
-//<![CDATA[
-${jsCode}
-//]]>
-    <\/script>
-</body>
-</html>`;
-        downloadFile('project.html', fullHtml, 'text/html;charset=utf-8');
-    });
-
-     // --- Refresh CodeMirror on window resize ---
-    let resizeTimeout;
-    window.addEventListener('resize', () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-             // Only refresh if not in a maximized state where editors might be hidden
-            if (!mainContainer.classList.contains('preview-maximized')) {
-                Object.values(editors).forEach(editor => editor.refresh());
-            }
-        }, 250); // Debounce resize events
-    });
-
-    // --- Initial Actions ---
-    updatePreview(); // Initial preview render on load
-    previewMaximizeBtn.classList.add('maximize-internal'); // Set initial button class for CSS icon targeting
+    console.log("--- Editor setup complete ---");
 
 }); // End DOMContentLoaded
